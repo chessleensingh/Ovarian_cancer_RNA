@@ -56,6 +56,30 @@ shiny::runApp('deseq2_educational_app.R')
 ### Prerequisites
 - R (version 4.0 or higher recommended)
 - RStudio (optional but recommended)
+- Git (for cloning the repository)
+
+### Setup on a New Computer
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/chessleensingh/Ovarian_cancer_RNA.git
+   cd Ovarian_cancer_RNA
+   ```
+
+2. **Add your data files**:
+   The app requires data files that are not included in the repository (due to size).
+   Create a `data/` folder and add your `deseq2_results.RData` file:
+   ```bash
+   mkdir -p data
+   # Copy your deseq2_results.RData file to the data/ folder
+   ```
+
+3. **Install dependencies** (see below)
+
+4. **Run the app**:
+   ```bash
+   Rscript launch_deseq2_app.R
+   ```
 
 ### Install Dependencies
 

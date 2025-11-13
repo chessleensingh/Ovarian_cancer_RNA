@@ -5,8 +5,14 @@ cat("==================================================\n")
 cat("EDUCATIONAL DESEQ2 APP - LAUNCH SCRIPT\n")
 cat("==================================================\n\n")
 
-# Set working directory
-setwd("/Users/sachleensingh/Desktop/Poetry/Ovarian_cancer")
+# Set working directory to the script's location
+script_dir <- dirname(normalizePath(sys.frame(1)$ofile, mustWork = FALSE))
+if (is.na(script_dir) || script_dir == "") {
+  # If running interactively, use current directory
+  script_dir <- getwd()
+}
+setwd(script_dir)
+cat("Working directory:", getwd(), "\n\n")
 
 # Check if required data exists
 if (!file.exists("data/deseq2_results.RData")) {
