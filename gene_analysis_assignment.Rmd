@@ -1,0 +1,769 @@
+---
+title: "Ovarian Cancer Gene Expression Analysis - Student Assignment"
+author: "Your Name Here"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.width = 10, fig.height = 6)
+
+# Load required libraries
+library(ggplot2)
+library(pheatmap)
+library(RColorBrewer)
+library(survival)
+library(survminer)
+library(dplyr)
+library(tidyr)
+
+# Set seed for reproducibility
+set.seed(123)
+```
+
+# Introduction
+
+## Background: Ovarian Cancer
+
+Ovarian cancer is the fifth leading cause of cancer deaths among women and the most lethal gynecological malignancy. It is often diagnosed at advanced stages because early-stage disease is typically asymptomatic. The 5-year survival rate ranges from over 90% for early-stage disease to less than 30% for advanced-stage disease.
+
+**Why is this important?**
+
+- Ovarian cancer is heterogeneous - patients with similar clinical features can have vastly different outcomes
+- Current treatment decisions are based primarily on clinical stage, but this doesn't capture molecular differences
+- Gene expression profiling can identify molecular subtypes and predict which patients are at highest risk
+
+## The Cancer Genome Atlas (TCGA)
+
+This assignment uses real data from **The Cancer Genome Atlas (TCGA)**, a landmark cancer genomics program that characterized over 20,000 cancer samples across 33 cancer types. For ovarian cancer specifically:
+
+- RNA sequencing (RNA-seq) measured expression levels of ~20,000 genes
+- Clinical data tracked patient outcomes including survival times
+- Data is publicly available, enabling reproducible research worldwide
+
+**What is RNA-seq?**
+
+RNA sequencing measures how much each gene is "turned on" (expressed) in a sample:
+- High expression = gene is actively making RNA/protein
+- Low expression = gene is relatively inactive
+- Comparing expression between patients can reveal which genes are associated with outcomes
+
+## Assignment Goals
+
+In this assignment, you will:
+
+1. Identify **multi-gene expression patterns** using heatmap clustering
+2. Develop a **prognostic gene signature** to predict patient outcomes
+3. Validate your signature by comparing it to random genes
+4. Consider how your findings could be translated to clinical practice
+
+This mirrors the workflow used in real cancer genomics research to discover biomarkers and develop clinical tests.
+
+# Data Loading
+
+```{r load-data}
+# Load the processed data
+load("data/processed_data.RData")
+
+cat("Data loaded successfully!\n")
+cat("Number of patients:", nrow(full_data), "\n")
+cat("Number of genes analyzed:", length(gene_cols), "\n")
+cat("Alive patients:", sum(full_data$survival_status == "Alive"), "\n")
+cat("Deceased patients:", sum(full_data$survival_status == "Dead"), "\n")
+
+# Show differential expression summary
+cat("\nDifferential Expression Results:\n")
+cat("Total genes tested:", nrow(diff_exp_results), "\n")
+cat("Significant genes (FDR<0.05, |log2FC|>0.5):",
+    sum(diff_exp_results$significant == "Yes"), "\n")
+```
+
+---
+
+# Section 5: Multi-Gene Patterns and Heatmaps (15 points)
+
+## Question 21 (4 points): Clustered Heatmap
+
+**Task:** Create a clustered heatmap of the top 20 differentially expressed genes.
+
+```{r q21-heatmap, fig.height=8}
+# Get top 20 most significant DE genes
+top_genes <- head(diff_exp_results[order(diff_exp_results$p_value), ], 20)
+top_gene_names <- top_genes$gene_id
+
+cat("Top 20 genes selected based on p-value\n")
+cat("Number of genes:", length(top_gene_names), "\n")
+
+# Extract expression data for these genes
+heatmap_data <- as.matrix(full_data[, top_gene_names])
+rownames(heatmap_data) <- full_data$patient_id
+
+# Create annotation for patient survival status
+annotation_col <- data.frame(
+  Status = full_data$survival_status
+)
+rownames(annotation_col) <- full_data$patient_id
+
+# Define colors
+status_colors <- list(Status = c("Alive" = "#2E86AB", "Dead" = "#A23B72"))
+
+# Create clustered heatmap
+pheatmap(t(heatmap_data),
+         annotation_col = annotation_col,
+         annotation_colors = status_colors,
+         cluster_rows = TRUE,
+         cluster_cols = TRUE,
+         scale = "row",
+         show_colnames = FALSE,
+         show_rownames = TRUE,
+         fontsize_row = 8,
+         main = "Clustered Heatmap: Top 20 DE Genes",
+         color = colorRampPalette(c("blue", "white", "red"))(100))
+```
+
+### Answers:
+
+**a) How many genes are shown?**
+
+*Your answer here:*
+
+
+
+**b) How are patients organized in the heatmap?**
+
+*Your answer here:*
+
+
+
+**c) What does the color scale represent?**
+
+*Your answer here:*
+
+
+
+---
+
+## Question 22 (4 points): Patient Clustering
+
+**Task:** Do patients cluster by survival status? How many distinct patient groups do you observe?
+
+```{r q22-clustering}
+# Perform hierarchical clustering on patients
+patient_dist <- dist(heatmap_data)
+patient_hclust <- hclust(patient_dist, method = "complete")
+
+# Cut tree to get clusters
+patient_clusters <- cutree(patient_hclust, k = 2)
+
+# Analyze cluster composition
+cluster_analysis <- data.frame(
+  patient_id = full_data$patient_id,
+  survival_status = full_data$survival_status,
+  cluster = patient_clusters
+)
+
+# Calculate percentages for each cluster
+cluster_summary <- cluster_analysis %>%
+  group_by(cluster, survival_status) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(cluster) %>%
+  mutate(percentage = round(count / sum(count) * 100, 1))
+
+print("Cluster composition:")
+print(cluster_summary)
+
+# Visualization
+ggplot(cluster_summary, aes(x = factor(cluster), y = count, fill = survival_status)) +
+  geom_bar(stat = "identity", position = "fill") +
+  geom_text(aes(label = paste0(percentage, "%")),
+            position = position_fill(vjust = 0.5), color = "white", size = 5) +
+  scale_fill_manual(values = c("Alive" = "#2E86AB", "Dead" = "#A23B72")) +
+  labs(title = "Patient Cluster Composition by Survival Status",
+       x = "Cluster", y = "Proportion", fill = "Status") +
+  theme_minimal(base_size = 12)
+```
+
+### Answers:
+
+**a) Do patients cluster by survival status?**
+
+*Your answer here:*
+
+
+
+**b) What percentage of each cluster is deceased vs alive?**
+
+*Your answer here:*
+
+
+
+**c) Is there clear separation between alive and dead patients?**
+
+*Your answer here:*
+
+
+
+---
+
+## Question 23 (4 points): Gene Expression Patterns
+
+**Task:** Identify 2-3 genes that show high expression specifically in deceased patients.
+
+```{r q23-gene-patterns}
+# Calculate mean expression for each gene in alive vs dead patients
+gene_means <- data.frame(
+  gene_id = top_gene_names,
+  mean_alive = sapply(top_gene_names, function(g) mean(full_data[full_data$survival_status == "Alive", g])),
+  mean_dead = sapply(top_gene_names, function(g) mean(full_data[full_data$survival_status == "Dead", g])),
+  stringsAsFactors = FALSE
+)
+
+gene_means$difference <- gene_means$mean_dead - gene_means$mean_alive
+gene_means <- gene_means[order(-gene_means$difference), ]
+
+cat("\nGenes most highly expressed in deceased patients:\n")
+print(head(gene_means, 5))
+
+# Visualize top 3 genes
+top_3_genes <- head(gene_means$gene_id, 3)
+
+plot_data <- full_data %>%
+  select(patient_id, survival_status, all_of(top_3_genes)) %>%
+  pivot_longer(cols = all_of(top_3_genes), names_to = "gene", values_to = "expression")
+
+ggplot(plot_data, aes(x = survival_status, y = expression, fill = survival_status)) +
+  geom_boxplot() +
+  facet_wrap(~gene, scales = "free_y", ncol = 3) +
+  scale_fill_manual(values = c("Alive" = "#2E86AB", "Dead" = "#A23B72")) +
+  labs(title = "Top 3 Genes Highly Expressed in Deceased Patients",
+       x = "Survival Status", y = "Expression Level") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom")
+```
+
+### Answers:
+
+**a) Which genes are most highly expressed in deceased patients?**
+
+*Your answer here:*
+
+
+
+**b) What is the expression difference between groups?**
+
+*Your answer here:*
+
+
+
+---
+
+## Question 24 (3 points): Biological Interpretation
+
+**Task:** Why might certain genes cluster together in the heatmap?
+
+```{r q24-gene-correlation}
+# Calculate correlation among top DE genes
+gene_cor <- cor(heatmap_data, use = "pairwise.complete.obs")
+
+# Visualize gene-gene correlations
+pheatmap(gene_cor,
+         cluster_rows = TRUE,
+         cluster_cols = TRUE,
+         display_numbers = FALSE,
+         fontsize_row = 7,
+         fontsize_col = 7,
+         main = "Gene-Gene Correlation Matrix",
+         color = colorRampPalette(c("blue", "white", "red"))(100))
+
+# Identify highly correlated gene pairs
+high_cor <- which(gene_cor > 0.7 & gene_cor < 1, arr.ind = TRUE)
+if(nrow(high_cor) > 0) {
+  cat("\nHighly correlated gene pairs (r > 0.7):\n")
+  for(i in 1:min(5, nrow(high_cor))) {
+    cat(sprintf("%s <-> %s: r = %.3f\n",
+                rownames(gene_cor)[high_cor[i,1]],
+                colnames(gene_cor)[high_cor[i,2]],
+                gene_cor[high_cor[i,1], high_cor[i,2]]))
+  }
+}
+```
+
+### Answers:
+
+**a) What biological reasons cause genes to have similar expression patterns?**
+
+*Your answer here:*
+
+
+
+**b) What does high within-cluster correlation suggest?**
+
+*Your answer here:*
+
+
+
+**c) Correlation vs. Causation: Does high gene expression *cause* poor survival outcomes?**
+
+We've identified genes that are differentially expressed in deceased vs. alive patients, and genes that correlate with survival time. However, correlation does not equal causation.
+
+**Answer the following:**
+
+1. Does differential expression or correlation *prove* that a gene functionally causes poor outcomes? Why or why not?
+
+*Your answer here:*
+
+
+
+2. What alternative explanations could account for why a gene is highly expressed in deceased patients? (Consider: Is it a driver of disease, or a consequence? Could it be a passenger mutation? Could it be related to treatment effects or tumor microenvironment?)
+
+*Your answer here:*
+
+
+
+3. What additional experiments would you need to perform to *prove* that a specific gene causally contributes to poor survival? (Consider: cell line experiments, animal models, CRISPR knockouts, etc.)
+
+*Your answer here:*
+
+
+
+---
+
+# Section 6: Building a Prognostic Gene Signature (15 points)
+
+## Question 25 (2 points): Calculate Gene Signature Score
+
+**Task:** Calculate a signature score for each patient using the mean expression of the signature genes.
+
+```{r q25-signature-score}
+# Use top 10 most significant DE genes as signature
+signature_genes <- head(diff_exp_results[order(diff_exp_results$p_value), ], 10)$gene_id
+
+cat("Signature genes:", length(signature_genes), "\n")
+cat("Genes:", paste(signature_genes[1:5], collapse = ", "), "...\n")
+
+# Calculate signature score as mean expression
+full_data$signature_score <- rowMeans(full_data[, signature_genes], na.rm = TRUE)
+
+# Calculate statistics by group
+score_stats <- full_data %>%
+  group_by(survival_status) %>%
+  summarise(
+    n = n(),
+    mean_score = mean(signature_score, na.rm = TRUE),
+    sd_score = sd(signature_score, na.rm = TRUE),
+    median_score = median(signature_score, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+print(score_stats)
+
+# T-test
+t_test_result <- t.test(signature_score ~ survival_status, data = full_data)
+cat("\nT-test p-value:", format.pval(t_test_result$p.value, digits = 3), "\n")
+
+# Visualize
+ggplot(full_data, aes(x = survival_status, y = signature_score, fill = survival_status)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2, alpha = 0.3) +
+  scale_fill_manual(values = c("Alive" = "#2E86AB", "Dead" = "#A23B72")) +
+  labs(title = "Gene Signature Score by Survival Status",
+       subtitle = paste0("T-test p-value: ", format.pval(t_test_result$p.value, digits = 3)),
+       x = "Survival Status", y = "Signature Score") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+### Answers:
+
+**a) What is the mean signature score in alive patients?**
+
+*Your answer here:*
+
+
+
+**b) What is the mean signature score in deceased patients?**
+
+*Your answer here:*
+
+
+
+**c) Is there a significant difference (t-test)?**
+
+*Your answer here:*
+
+
+
+---
+
+## Question 25b (3 points): Understanding Multiple Testing Correction
+
+**Task:** Understand why we use adjusted p-values (FDR) when testing many genes.
+
+```{r q25b-multiple-testing}
+# Show top 10 genes with both raw and adjusted p-values
+top_genes_pval <- head(diff_exp_results, 10)
+
+cat("Top 10 genes by p-value:\n")
+print(top_genes_pval[, c("gene_id", "p_value", "p_adj", "log2_fold_change", "significant")])
+
+# Count significance by different thresholds
+cat("\n\nSignificance counts:\n")
+cat("Genes with raw p < 0.05:", sum(diff_exp_results$p_value < 0.05), "\n")
+cat("Genes with FDR (p_adj) < 0.05:", sum(diff_exp_results$p_adj < 0.05), "\n")
+cat("Genes with FDR < 0.05 AND |log2FC| > 0.5:", sum(diff_exp_results$significant == "Yes"), "\n")
+
+# Visualize the difference
+plot_data <- diff_exp_results[1:min(100, nrow(diff_exp_results)), ]
+plot_data$rank <- 1:nrow(plot_data)
+
+library(ggplot2)
+ggplot(plot_data, aes(x = rank)) +
+  geom_line(aes(y = p_value, color = "Raw p-value"), size = 1) +
+  geom_line(aes(y = p_adj, color = "Adjusted p-value (FDR)"), size = 1) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red") +
+  scale_color_manual(values = c("Raw p-value" = "#2E86AB", "Adjusted p-value (FDR)" = "#A23B72")) +
+  labs(title = "Raw vs. Adjusted P-values (Top 100 Genes)",
+       subtitle = "Red line shows p = 0.05 threshold",
+       x = "Gene Rank (ordered by raw p-value)", y = "P-value", color = "") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom")
+```
+
+### Answers:
+
+**a) What is the difference between a raw p-value and an adjusted p-value (FDR)?**
+
+*Your answer here:*
+
+
+
+**b) Why do we need to adjust p-values when testing hundreds of genes?**
+
+Hint: If we test 1000 genes with p < 0.05 threshold, how many would we expect to be "significant" by chance alone, even if there's no real effect?
+
+*Your answer here:*
+
+
+
+**c) Look at the plot and table above. How many genes are "significant" using raw p-values vs. adjusted p-values? What does this tell you?**
+
+*Your answer here:*
+
+
+
+**d) Why is this important for building gene signatures?**
+
+Hint: What might happen if you build a signature using genes that are only significant because of multiple testing (false positives)?
+
+*Your answer here:*
+
+
+
+---
+
+## Question 26 (3 points): Create Risk Groups
+
+**Task:** Divide patients into "high-risk" and "low-risk" groups based on signature score.
+
+```{r q26-risk-groups}
+# Use median as cutoff
+cutoff <- median(full_data$signature_score, na.rm = TRUE)
+cat("Median signature score (cutoff):", round(cutoff, 3), "\n")
+
+# Create risk groups
+full_data$risk_group <- ifelse(full_data$signature_score > cutoff, "High Risk", "Low Risk")
+
+# Analyze risk groups
+risk_summary <- full_data %>%
+  group_by(risk_group, survival_status) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(risk_group) %>%
+  mutate(
+    total = sum(count),
+    percentage = round(count / total * 100, 1)
+  )
+
+print(risk_summary)
+
+# Visualize
+ggplot(risk_summary, aes(x = risk_group, y = count, fill = survival_status)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = paste0(count, " (", percentage, "%)")),
+            position = position_dodge(width = 0.9), vjust = -0.5, size = 3.5) +
+  scale_fill_manual(values = c("Alive" = "#2E86AB", "Dead" = "#A23B72")) +
+  labs(title = "Risk Group Composition",
+       x = "Risk Group", y = "Number of Patients", fill = "Status") +
+  theme_minimal(base_size = 12)
+```
+
+### Answers:
+
+**a) What cutoff value did you use (median)?**
+
+*Your answer here:*
+
+
+
+**b) How many patients are in each risk group?**
+
+*Your answer here:*
+
+
+
+**c) What percentage of each group is deceased?**
+
+*Your answer here:*
+
+
+
+---
+
+## Question 27 (4 points): Kaplan-Meier by Risk Group
+
+**Task:** Plot Kaplan-Meier curves for high-risk vs low-risk patients.
+
+```{r q27-km-curves, fig.height=7}
+# Prepare survival object
+surv_obj <- Surv(time = full_data$months_to_death, event = full_data$survival_status == "Dead")
+
+# Fit survival curves by risk group
+fit <- survfit(surv_obj ~ risk_group, data = full_data)
+
+# Log-rank test
+logrank_test <- survdiff(surv_obj ~ risk_group, data = full_data)
+logrank_pval <- 1 - pchisq(logrank_test$chisq, length(logrank_test$n) - 1)
+
+cat("\nLog-rank test p-value:", format.pval(logrank_pval, digits = 3), "\n")
+
+# Get median survival times
+median_surv <- summary(fit)$table[, "median"]
+cat("\nMedian survival times:\n")
+print(median_surv)
+
+# Plot Kaplan-Meier curves
+ggsurvplot(
+  fit,
+  data = full_data,
+  pval = TRUE,
+  pval.method = TRUE,
+  conf.int = TRUE,
+  risk.table = TRUE,
+  risk.table.height = 0.25,
+  palette = c("High Risk" = "#A23B72", "Low Risk" = "#2E86AB"),
+  title = "Kaplan-Meier Survival Curves by Risk Group",
+  xlab = "Time (months)",
+  ylab = "Survival Probability",
+  legend.title = "Risk Group",
+  legend.labs = c("High Risk", "Low Risk"),
+  ggtheme = theme_minimal(base_size = 12)
+)
+```
+
+### Answers:
+
+**a) What is the log-rank test p-value?**
+
+*Your answer here:*
+
+
+
+**b) Do the survival curves separate significantly?**
+
+*Your answer here:*
+
+
+
+**c) What is the median survival for each risk group?**
+
+*Your answer here:*
+
+
+
+---
+
+## Question 28 (3 points): Test Different Methods
+
+**Task:** Compare different ways of calculating the signature score (mean, median, sum).
+
+```{r q28-methods-comparison}
+# Calculate signature scores using different methods
+full_data$score_mean <- rowMeans(full_data[, signature_genes], na.rm = TRUE)
+full_data$score_median <- apply(full_data[, signature_genes], 1, median, na.rm = TRUE)
+full_data$score_sum <- rowSums(full_data[, signature_genes], na.rm = TRUE)
+
+# Function to test signature method
+test_signature <- function(score_col, method_name) {
+  # Create risk groups
+  cutoff <- median(score_col, na.rm = TRUE)
+  risk <- ifelse(score_col > cutoff, "High", "Low")
+
+  # Survival analysis
+  surv_obj <- Surv(time = full_data$months_to_death, event = full_data$survival_status == "Dead")
+  logrank <- survdiff(surv_obj ~ risk)
+  pval <- 1 - pchisq(logrank$chisq, length(logrank$n) - 1)
+
+  return(data.frame(
+    Method = method_name,
+    P_value = pval,
+    Significant = ifelse(pval < 0.05, "Yes", "No")
+  ))
+}
+
+# Compare methods
+comparison <- rbind(
+  test_signature(full_data$score_mean, "Mean"),
+  test_signature(full_data$score_median, "Median"),
+  test_signature(full_data$score_sum, "Sum")
+)
+
+comparison$P_value <- format.pval(comparison$P_value, digits = 3)
+
+cat("\nComparison of signature calculation methods:\n")
+print(comparison)
+
+# Visualize
+comparison_plot <- comparison
+comparison_plot$P_numeric <- as.numeric(gsub("<", "", comparison_plot$P_value))
+comparison_plot$P_numeric <- ifelse(is.na(comparison_plot$P_numeric), 0.001, comparison_plot$P_numeric)
+
+ggplot(comparison_plot, aes(x = Method, y = -log10(P_numeric), fill = Significant)) +
+  geom_bar(stat = "identity") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "red") +
+  scale_fill_manual(values = c("Yes" = "#2E86AB", "No" = "gray70")) +
+  labs(title = "Comparison of Signature Calculation Methods",
+       subtitle = "Dashed line indicates p = 0.05",
+       x = "Method", y = "-log10(P-value)") +
+  theme_minimal(base_size = 12)
+```
+
+### Answers:
+
+**a) Which method gives the best p-value?**
+
+*Your answer here:*
+
+
+
+**b) Do all three methods give similar results?**
+
+*Your answer here:*
+
+
+
+**c) Which method would you recommend?**
+
+*Your answer here:*
+
+
+
+---
+
+## Question 29 (2 points): Compare to Random Genes
+
+**Task:** Does your signature perform better than a random set of genes?
+
+```{r q29-random-comparison}
+# Test 100 random signatures
+n_permutations <- 100
+random_pvals <- numeric(n_permutations)
+
+for(i in 1:n_permutations) {
+  # Select random genes
+  random_genes <- sample(gene_cols, length(signature_genes))
+
+  # Calculate random signature score
+  random_score <- rowMeans(full_data[, random_genes], na.rm = TRUE)
+
+  # Test random signature
+  random_result <- test_signature(random_score, "Random")
+  random_pvals[i] <- as.numeric(gsub("<", "", random_result$P_value))
+  random_pvals[i] <- ifelse(is.na(random_pvals[i]), 0.001, random_pvals[i])
+}
+
+# Get actual signature p-value
+actual_pval <- as.numeric(gsub("<", "", comparison[comparison$Method == "Mean", "P_value"]))
+actual_pval <- ifelse(is.na(actual_pval), 0.001, actual_pval)
+
+cat("\nYour signature p-value:", format.pval(actual_pval, digits = 3), "\n")
+cat("Median random signature p-value:", format.pval(median(random_pvals), digits = 3), "\n")
+cat("Percentage of random signatures outperformed:",
+    round(mean(random_pvals > actual_pval) * 100, 1), "%\n")
+
+# Visualize
+ggplot(data.frame(pval = random_pvals), aes(x = pval)) +
+  geom_histogram(bins = 30, fill = "gray70", color = "black", alpha = 0.7) +
+  geom_vline(xintercept = actual_pval, color = "#A23B72", linewidth = 1.5, linetype = "dashed") +
+  annotate("text", x = actual_pval, y = Inf, vjust = 2,
+           label = paste0("Your signature\np = ", format.pval(actual_pval, digits = 3)),
+           color = "#A23B72", size = 4, fontface = "bold") +
+  labs(title = "Your Signature vs Random Gene Signatures",
+       subtitle = paste0(n_permutations, " random permutations"),
+       x = "P-value (Log-rank test)", y = "Frequency") +
+  theme_minimal(base_size = 12)
+```
+
+### Answers:
+
+**a) What is your signature's p-value?**
+
+*Your answer here:*
+
+
+
+**b) What percentage of random signatures does yours outperform?**
+
+*Your answer here:*
+
+
+
+---
+
+## Question 30 (1 point): Clinical Application
+
+**Task:** How could this signature be used in clinical practice?
+
+### Answers:
+
+**a) Discuss treatment planning, risk stratification, clinical trials:**
+
+*Your answer here:*
+
+
+
+**b) What would be needed to implement this clinically?**
+
+*Your answer here:*
+
+
+
+**c) What are the practical applications?**
+
+*Your answer here:*
+
+
+
+---
+
+# Summary Statistics
+
+```{r summary}
+cat("\n=== FINAL SUMMARY ===\n")
+cat("Total patients analyzed:", nrow(full_data), "\n")
+cat("Signature genes:", length(signature_genes), "\n")
+cat("High-risk patients:", sum(full_data$risk_group == "High Risk"), "\n")
+cat("Low-risk patients:", sum(full_data$risk_group == "Low Risk"), "\n")
+cat("Signature performance vs random:",
+    round(mean(random_pvals > actual_pval) * 100, 1), "% better\n")
+```
+
+---
+
+# Session Information
+
+```{r session-info}
+sessionInfo()
+```
