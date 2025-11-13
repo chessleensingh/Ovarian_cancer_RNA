@@ -1,10 +1,10 @@
 # Ovarian Cancer Gene Expression Analysis
 
-Interactive Shiny applications for exploring differential gene expression in ovarian cancer patients from TCGA data.
+Interactive Shiny application for learning differential gene expression analysis in ovarian cancer using TCGA data.
 
 ## Overview
 
-This project analyzes gene expression data from The Cancer Genome Atlas (TCGA) ovarian cancer cohort to identify genes associated with patient survival outcomes. It includes two interactive Shiny applications for educational and research purposes.
+This project analyzes gene expression data from The Cancer Genome Atlas (TCGA) ovarian cancer cohort to identify genes associated with patient survival outcomes. It includes an educational Shiny application for understanding DESeq2 analysis methods.
 
 ## Dataset
 
@@ -13,39 +13,30 @@ This project analyzes gene expression data from The Cancer Genome Atlas (TCGA) o
 - **Genes**: 19,496 genes analyzed
 - **Significant DE genes**: 677 genes (FDR < 0.05)
 
-## Applications
+## Application
 
-### 1. DESeq2 Educational App (`deseq2_educational_app.R`)
+### DESeq2 Educational App (`deseq2_educational_app.R`)
 
-An educational tool to understand RNA-seq differential expression analysis.
+An interactive educational tool designed to teach RNA-seq differential expression analysis using DESeq2.
 
 **Features:**
-- Understanding count distributions and negative binomial models
-- Normalization methods
-- Gene-by-gene comparison
-- Volcano and MA plots
-- PCA quality control
-- Heatmap clustering
+- **Introduction to DESeq2**: Understanding the workflow and statistical methods
+- **Count Distributions**: Visualizing negative binomial distributions in RNA-seq data
+- **Normalization**: Learning DESeq2's median-of-ratios normalization method
+- **Gene-by-Gene Comparison**: Interactive exploration of expression differences
+- **Volcano & MA Plots**: Publication-quality interactive plots (with fixed Plotly rendering)
+- **PCA Quality Control**: Sample clustering and outlier detection
+- **Heatmap Analysis**: Comparing top DE genes vs random genes
+- **Dispersion Estimates**: Understanding variance modeling
 
 **Launch:**
 ```r
 Rscript launch_deseq2_app.R
 ```
 
-### 2. Gene Expression Explorer (`app.R`)
-
-Interactive explorer for examining gene expression patterns.
-
-**Features:**
-- Single gene expression visualization
-- Multi-gene heatmaps
-- Gene correlation analysis
-- Differential expression results
-- Multi-gene signature builder
-
-**Launch:**
+Or directly:
 ```r
-shiny::runApp('app.R')
+shiny::runApp('deseq2_educational_app.R')
 ```
 
 ## Key Findings
