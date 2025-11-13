@@ -51,30 +51,30 @@ shiny::runApp('deseq2_educational_app.R')
 - **DE genes only**: Strong separation (p = 0.0008 on PC1, p < 0.0001 on PC2)
 - **20× improvement** in group separation when focusing on DE genes
 
-## Files
+## Installation
 
-### Analysis Scripts
-- `deseq2_analysis_fixed.R` - Main DESeq2 differential expression analysis
-- `data_prep_optimized.R` - Data preparation (top 1000 variable genes)
+### Prerequisites
+- R (version 4.0 or higher recommended)
+- RStudio (optional but recommended)
 
-### Shiny Applications
-- `deseq2_educational_app.R` - Educational DESeq2 app
-- `app.R` - Gene expression explorer
-- `launch_deseq2_app.R` - Launcher script
-- `launch_app.R` - Launcher for main app
+### Install Dependencies
 
-### Utilities
-- `pca_de_genes_only.R` - PCA analysis with DE genes only
-- `.gitignore` - Git ignore patterns
+**Option 1: Automatic Installation (Recommended)**
+```bash
+Rscript install_dependencies.R
+```
 
-## Requirements
+This script will automatically install all required packages from CRAN and Bioconductor.
 
-### R Packages
+**Option 2: Manual Installation**
 ```r
-# Bioconductor
+# Install BiocManager if needed
+install.packages("BiocManager")
+
+# Install Bioconductor packages
 BiocManager::install(c("DESeq2", "SummarizedExperiment"))
 
-# CRAN
+# Install CRAN packages
 install.packages(c(
   "shiny",
   "shinydashboard",
@@ -85,6 +85,23 @@ install.packages(c(
   "RColorBrewer"
 ))
 ```
+
+## Files
+
+### Setup
+- `install_dependencies.R` - Automatic dependency installer
+
+### Analysis Scripts
+- `deseq2_analysis_fixed.R` - Main DESeq2 differential expression analysis
+- `data_prep_optimized.R` - Data preparation (top 1000 variable genes)
+
+### Shiny Application
+- `deseq2_educational_app.R` - Educational DESeq2 app (main application)
+- `launch_deseq2_app.R` - Launcher script
+
+### Utilities
+- `pca_de_genes_only.R` - PCA analysis with DE genes only
+- `.gitignore` - Git ignore patterns
 
 ## Results
 
@@ -123,18 +140,34 @@ data/
 
 ## Usage
 
-1. **Run DESeq2 analysis** (if starting fresh):
-   ```r
-   Rscript deseq2_analysis_fixed.R
+### Quick Start
+
+1. **Install dependencies** (first time only):
+   ```bash
+   Rscript install_dependencies.R
    ```
 
-2. **Launch educational app**:
-   ```r
+2. **Launch the educational app**:
+   ```bash
    Rscript launch_deseq2_app.R
    ```
-   Navigate to: http://127.0.0.1:3568
+   The app will open in your browser automatically.
 
-3. **Explore results interactively** using the Shiny app tabs
+3. **Explore the app tabs**:
+   - Introduction → Learn about DESeq2
+   - Count Distribution → Understand RNA-seq data
+   - Normalization → See how DESeq2 normalizes
+   - Gene Comparison → Compare individual genes
+   - DE Results → View volcano & MA plots
+   - Top vs Random → See DE gene clustering
+   - Quality Control → Check PCA and dispersion
+
+### Advanced Usage
+
+If you want to re-run the analysis from scratch (requires data files):
+```bash
+Rscript deseq2_analysis_fixed.R
+```
 
 ## Citation
 
