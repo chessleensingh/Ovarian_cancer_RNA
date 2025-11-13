@@ -96,8 +96,9 @@ ui <- dashboardPage(
               ),
               fluidRow(
                 box(width = 6,
-                    selectInput("dist_gene", "Select a gene to visualize:",
-                                choices = all_genes, selected = all_genes[1])
+                    selectizeInput("dist_gene", "Select a gene to visualize:",
+                                   choices = NULL, selected = NULL,
+                                   options = list(placeholder = 'Type to search for a gene...'))
                 ),
                 box(width = 6,
                     h4("Gene Statistics:"),
@@ -178,8 +179,9 @@ ui <- dashboardPage(
               ),
               fluidRow(
                 box(width = 4,
-                    selectInput("compare_gene", "Select gene:",
-                                choices = all_genes, selected = top_de_genes$gene_id[1]),
+                    selectizeInput("compare_gene", "Select gene:",
+                                   choices = NULL, selected = NULL,
+                                   options = list(placeholder = 'Type to search for a gene...')),
                     actionButton("pick_top_de", "Pick Top DE Gene", icon = icon("star")),
                     actionButton("pick_random", "Pick Random Gene", icon = icon("random")),
                     hr(),
@@ -304,6 +306,17 @@ server <- function(input, output, session) {
       rv$random_genes <- sample(all_genes, 20)
     }
   })
+
+  # Update selectizeInput choices on server side for better performance
+  updateSelectizeInput(session, "dist_gene",
+                       choices = all_genes,
+                       selected = all_genes[1],
+                       server = TRUE)
+
+  updateSelectizeInput(session, "compare_gene",
+                       choices = all_genes,
+                       selected = top_de_genes$gene_id[1],
+                       server = TRUE)
 
   # ===== DISTRIBUTION TAB =====
 
