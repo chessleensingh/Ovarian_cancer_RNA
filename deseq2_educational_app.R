@@ -97,8 +97,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(width = 6,
                     selectInput("dist_gene", "Select a gene to visualize:",
-                                choices = sample(all_genes, 100), selected = all_genes[1]),
-                    actionButton("random_gene_dist", "Pick Random Gene", icon = icon("random"))
+                                choices = all_genes, selected = all_genes[1])
                 ),
                 box(width = 6,
                     h4("Gene Statistics:"),
@@ -307,10 +306,6 @@ server <- function(input, output, session) {
   })
 
   # ===== DISTRIBUTION TAB =====
-
-  observeEvent(input$random_gene_dist, {
-    updateSelectInput(session, "dist_gene", selected = sample(all_genes, 1))
-  })
 
   output$gene_stats <- renderPrint({
     gene <- input$dist_gene
